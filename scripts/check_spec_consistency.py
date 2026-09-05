@@ -13,11 +13,13 @@ if __package__:  # Package import in tests.
         NON_RELATIVE_LINK_PREFIXES,
         extract_link_targets,
     )
+    from ._skill_lint import iter_skill_files
 else:  # pragma: no cover - exercised by the CLI smoke path
     from _markdown_lint_util import (
         NON_RELATIVE_LINK_PREFIXES,
         extract_link_targets,
     )
+    from _skill_lint import iter_skill_files
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -73,7 +75,7 @@ def check_relative_markdown_links(rel_path: str) -> None:
 def check_mode_registry() -> None:
     rel_path = "MODE_REGISTRY.md"
     text = read(rel_path)
-    expect_contains(rel_path, "Last updated: v3.21.1 (2026-08-24)")
+    expect_contains(rel_path, "Last updated: v3.21.2 (2026-09-06)")
     for heading in (
         "## deep-research (8 modes)",
         "## academic-paper (11 modes)",
@@ -87,7 +89,7 @@ def check_claude_md() -> None:
     rel_path = ".claude/CLAUDE.md"
     expect_contains(rel_path, "integrity check (Stage 2.5)")
     expect_contains(rel_path, "final integrity check (Stage 4.5)")
-    expect_contains(rel_path, "**Suite version**: 3.21.1")
+    expect_contains(rel_path, "**Suite version**: 3.21.2")
     for forbidden in (
         "6th independent reviewer",
         "Peer review gains 6th independent reviewer",
@@ -95,14 +97,17 @@ def check_claude_md() -> None:
         expect_absent(rel_path, forbidden)
 
 
-# All four skills carry the same frontmatter (`version` / `last_updated`) + Version-Info-table
-# (`| Skill Version |` / `| Last Updated |`) pair. Pre-#377 only the reviewer was policed.
-_SKILL_VERSION_PATHS = (
-    "academic-pipeline/SKILL.md",
-    "academic-paper/SKILL.md",
-    "academic-paper-reviewer/SKILL.md",
-    "deep-research/SKILL.md",
-)
+# Every top-level skill carries the same frontmatter (`version` / `last_updated`) +
+# Version-Info-table (`| Skill Version |` / `| Last Updated |`) pair. Pre-#377 only the
+# reviewer was policed. Derived from disk (#809) rather than hand-listed, so a new skill
+# directory is policed the moment it exists; check_skill_inventory_parity.py pins that
+# the on-disk set matches every surface that advertises it.
+def _skill_version_paths() -> tuple[str, ...]:
+    """Read ROOT at call time (tests swap `csc.ROOT` for fixture trees; an
+    import-time tuple would carry the real checkout's skills into them)."""
+    return tuple(
+        f"{skill_md.parent.name}/SKILL.md" for skill_md in iter_skill_files(ROOT)
+    )
 
 # The single skill whose `version` tracks the suite version. The other three move independently,
 # so only this one's date is sanity-checked against the release (CHANGELOG) in #377(b).
@@ -139,7 +144,7 @@ def _parse_skill_version_block(rel_path: str) -> tuple[str, str, str, str] | Non
 def check_skill_version_blocks() -> None:
     """#377(a): for ALL FOUR SKILL.md, the frontmatter version/last_updated must match the
     Version-Info-table rows (an internal per-file consistency check)."""
-    for rel_path in _SKILL_VERSION_PATHS:
+    for rel_path in _skill_version_paths():
         parsed = _parse_skill_version_block(rel_path)
         if parsed is None:
             continue
@@ -290,8 +295,8 @@ def check_readme_sections() -> None:
     rel_path = "README.md"
     text = read(rel_path)
 
-    expect_contains(rel_path, "version-v3.21.1-blue")
-    expect_contains(rel_path, "releases/tag/v3.21.1")
+    expect_contains(rel_path, "version-v3.21.2-blue")
+    expect_contains(rel_path, "releases/tag/v3.21.2")
     expect_contains(rel_path, "### v3.12.0 (2026-06-08)")
     expect_contains(rel_path, "### v3.11.1 (2026-06-06)")
     expect_contains(rel_path, "### v3.11.0 (2026-06-04)")
@@ -324,7 +329,7 @@ def check_readme_sections() -> None:
         "### Deep Research (v2.12.1)",
         "### Academic Paper (v3.3.1)",
         "### Academic Paper Reviewer (v1.11.1)",
-        "### Academic Pipeline (v3.21.1)",
+        "### Academic Pipeline (v3.21.2)",
     ):
         if heading not in text:
             fail(f"{rel_path}: missing heading {heading!r}")
@@ -373,8 +378,8 @@ def check_readme_ja_sections() -> None:
     rel_path = "README.ja-JP.md"
     text = read(rel_path)
 
-    expect_contains(rel_path, "version-v3.21.1-blue")
-    expect_contains(rel_path, "releases/tag/v3.21.1")
+    expect_contains(rel_path, "version-v3.21.2-blue")
+    expect_contains(rel_path, "releases/tag/v3.21.2")
     expect_contains(rel_path, "### v3.12.0 (2026-06-08)")
     expect_contains(rel_path, "### v3.11.1 (2026-06-06)")
     expect_contains(rel_path, "### v3.11.0 (2026-06-04)")
@@ -408,7 +413,7 @@ def check_readme_ja_sections() -> None:
         "### Deep Research（v2.12.1）",
         "### Academic Paper（v3.3.1）",
         "### Academic Paper Reviewer（v1.11.1）",
-        "### Academic Pipeline（v3.21.1）",
+        "### Academic Pipeline（v3.21.2）",
     ):
         if heading not in text:
             fail(f"{rel_path}: missing heading {heading!r}")
@@ -442,8 +447,8 @@ def check_readme_ko_sections() -> None:
     rel_path = "README.ko-KR.md"
     text = read(rel_path)
 
-    expect_contains(rel_path, "version-v3.21.1-blue")
-    expect_contains(rel_path, "releases/tag/v3.21.1")
+    expect_contains(rel_path, "version-v3.21.2-blue")
+    expect_contains(rel_path, "releases/tag/v3.21.2")
     expect_contains(rel_path, "### v3.18.0 (2026-07-18)")
     expect_contains(rel_path, "### v3.12.0 (2026-06-08)")
     expect_contains(rel_path, "### v3.11.1 (2026-06-06)")
@@ -478,7 +483,7 @@ def check_readme_ko_sections() -> None:
         "### Deep Research (v2.12.1)",
         "### Academic Paper (v3.3.1)",
         "### Academic Paper Reviewer (v1.11.1)",
-        "### Academic Pipeline (v3.21.1)",
+        "### Academic Pipeline (v3.21.2)",
     ):
         if heading not in text:
             fail(f"{rel_path}: missing heading {heading!r}")
@@ -503,7 +508,7 @@ ZH_README_CONFIGS = (
             "### Deep Research (v2.12.1)",
             "### Academic Paper (v3.3.1)",
             "### Academic Paper Reviewer (v1.11.1)",
-            "### Academic Pipeline (v3.21.1)",
+            "### Academic Pipeline (v3.21.2)",
         ),
         "paper_start": "#### Academic Paper（學術論文撰寫，11 種模式）",
         "reviewer_start": "#### Academic Paper Reviewer（論文審查，6 種模式）",
@@ -520,7 +525,7 @@ ZH_README_CONFIGS = (
             "### Deep Research (v2.12.1)",
             "### Academic Paper (v3.3.1)",
             "### Academic Paper Reviewer (v1.11.1)",
-            "### Academic Pipeline (v3.21.1)",
+            "### Academic Pipeline (v3.21.2)",
         ),
         "paper_start": "#### Academic Paper（学术论文撰写，11 种模式）",
         "reviewer_start": "#### Academic Paper Reviewer（论文审查，6 种模式）",
@@ -536,8 +541,8 @@ def check_readme_zh_sections() -> None:
         rel_path = config["rel_path"]
         text = read(rel_path)
 
-        expect_contains(rel_path, "version-v3.21.1-blue")
-        expect_contains(rel_path, "releases/tag/v3.21.1")
+        expect_contains(rel_path, "version-v3.21.2-blue")
+        expect_contains(rel_path, "releases/tag/v3.21.2")
         expect_contains(rel_path, "### v3.12.0（2026-06-08）")
         expect_contains(rel_path, "### v3.11.1（2026-06-06）")
         expect_contains(rel_path, "### v3.11.0（2026-06-04）")
